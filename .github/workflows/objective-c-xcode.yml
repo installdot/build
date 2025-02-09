@@ -63,4 +63,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BlockNet-dylib
-          path: "$MAKEFILE_DIR/.theos/obj/iphone/debug/arm64/BlockNet.dylib"
+          path: "$MAKEFILE_DIR/.theos/obj/iphone/debug/arm64/*.dylib"  # Use wildcard to find the .dylib
