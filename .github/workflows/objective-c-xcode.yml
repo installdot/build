@@ -43,32 +43,7 @@ jobs:
           # Save the path for later use
           echo "::set-output name=blocknet_m::$BLOCKNET_M_PATH"
 
-      - name: Generate Makefile if missing
-        run: |
-          # Automatically create a Makefile if it doesn't exist
-          MAKEFILE_PATH="${{ steps.find_blocknet_m.outputs.blocknet_m }}"
-          MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
-          
-          if [ ! -f "$MAKEFILE_DIR/Makefile" ]; then
-            echo "Creating Makefile..."
-            cat > "$MAKEFILE_DIR/Makefile" <<EOL
-ARCHS = arm64
-TARGET = iphone:clang:latest:7.0
 
-include \$(THEOS)/makefiles/common.mk
-
-TWEAK_NAME = BlockNet
-
-BlockNet_FILES = BlockNet.m
-BlockNet_FRAMEWORKS = UIKit
-BlockNet_LIBRARIES = objc
-
-include \$(THEOS)/makefiles/tweak.mk
-EOL
-            echo "Makefile created at $MAKEFILE_DIR/Makefile"
-          else
-            echo "Makefile already exists."
-          fi
 
       - name: Build the Tweak
         run: |
