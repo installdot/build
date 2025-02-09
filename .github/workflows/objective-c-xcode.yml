@@ -15,11 +15,17 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          # Install Theos (This requires a macOS runner)
           git clone --recursive https://github.com/theos/theos.git
           export THEOS=$(pwd)/theos
           export PATH=$THEOS/bin:$PATH
           echo "Theos installation complete."
+
+      - name: Install ldid
+        run: |
+          git clone https://github.com/iphonedev/ldid.git
+          cd ldid
+          make
+          sudo cp ldid /usr/local/bin/
 
       - name: Set up environment variables
         run: |
@@ -30,7 +36,6 @@ jobs:
       - name: Find BlockNet.m file
         id: find_blocknet_m
         run: |
-          # Search for BlockNet.m file in the repository
           BLOCKNET_M_PATH=$(find . -name 'BlockNet.m' -print -quit)
 
           if [ -z "$BLOCKNET_M_PATH" ]; then
@@ -39,17 +44,12 @@ jobs:
           fi
 
           echo "BlockNet.m found at $BLOCKNET_M_PATH"
-
-          # Save the path for later use
           echo "blocknet_m=$BLOCKNET_M_PATH" >> $GITHUB_ENV
 
       - name: Build the Tweak
         run: |
-          # Use the path of BlockNet.m to run the build
           BLOCKNET_M_PATH="${{ env.blocknet_m }}"
           MAKEFILE_DIR=$(dirname "$BLOCKNET_M_PATH")
-
-          # Navigate to the directory containing the Makefile and BlockNet.m
           cd "$MAKEFILE_DIR"
           
           echo "Building tweak with BlockNet.m in directory: $MAKEFILE_DIR"
