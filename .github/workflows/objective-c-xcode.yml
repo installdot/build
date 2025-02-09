@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3  # Use the latest GitHub Actions v3
+        uses: actions/checkout@v2
 
       - name: Set up dependencies
         run: |
@@ -26,30 +26,65 @@ jobs:
           export TARGET=iphone:clang:latest:7.0  # Adjust this if targeting a different iOS version
           export THEOS=$PWD/theos
           export PATH=$THEOS/bin:$PATH
-          echo "Environment setup complete."
 
-      - name: Find source files and build
+      - name: Find BlockNet.m file
+        id: find_blocknet_m
         run: |
-          # Find the source files (.m, .mm, .xm) in the current repository
-          SRC_FILES=$(find . -type f \( -name "*.m" -o -name "*.mm" -o -name "*.xm" \))
+          # Search for BlockNet.m file in the repository
+          BLOCKNET_M_PATH=$(find . -name 'BlockNet.m' -print -quit)
 
-          if [ -z "$SRC_FILES" ]; then
-            echo "No source files found. Exiting..."
+          if [ -z "$BLOCKNET_M_PATH" ]; then
+            echo "BlockNet.m not found!"
             exit 1
           fi
 
-          echo "Found source files: $SRC_FILES"
+          echo "BlockNet.m found at $BLOCKNET_M_PATH"
 
-          # Navigate to the directory where the Makefile is located
-          DIR_PATH=$(dirname "$SRC_FILES")
-          cd "$DIR_PATH"
+          # Save the path for later use
+          echo "::set-output name=blocknet_m::$BLOCKNET_M_PATH"
 
-          # Clean and build the package
+      - name: Generate Makefile if missing
+        run: |
+          # Automatically create a Makefile if it doesn't exist
+          MAKEFILE_PATH="${{ steps.find_blocknet_m.outputs.blocknet_m }}"
+          MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
+          
+          if [ ! -f "$MAKEFILE_DIR/Makefile" ]; then
+            echo "Creating Makefile..."
+            cat > "$MAKEFILE_DIR/Makefile" <<EOL
+ARCHS = arm64
+TARGET = iphone:clang:latest:7.0
+
+include \$(THEOS)/makefiles/common.mk
+
+TWEAK_NAME = BlockNet
+
+BlockNet_FILES = BlockNet.m
+BlockNet_FRAMEWORKS = UIKit
+BlockNet_LIBRARIES = objc
+
+include \$(THEOS)/makefiles/tweak.mk
+EOL
+            echo "Makefile created at $MAKEFILE_DIR/Makefile"
+          else
+            echo "Makefile already exists."
+          fi
+
+      - name: Build the Tweak
+        run: |
+          # Use the path of BlockNet.m to run the build
+          BLOCKNET_M_PATH=${{ steps.find_blocknet_m.outputs.blocknet_m }}
+          MAKEFILE_DIR=$(dirname "$BLOCKNET_M_PATH")
+
+          # Navigate to the directory containing the Makefile and BlockNet.m
+          cd "$MAKEFILE_DIR"
+          
+          echo "Building tweak with BlockNet.m in directory: $MAKEFILE_DIR"
           make clean
           make package
 
       - name: Upload the generated .dylib
-        uses: actions/upload-artifact@v4  # Updated to the latest v4 of the upload-artifact action
+        uses: actions/upload-artifact@v4
         with:
-          name: MyBlockButton-dylib
-          path: .theos/obj/iphone/debug/arm64/MyBlockButton.dylib
+          name: BlockNet-dylib
+          path: "$MAKEFILE_DIR/.theos/obj/iphone/debug/arm64/BlockNet.dylib"
