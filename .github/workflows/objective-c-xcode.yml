@@ -62,8 +62,8 @@ jobs:
       - name: Find and Upload the generated .dylib
         id: find_dylib
         run: |
-          # Find the generated .dylib file
-          DYLIB_PATH=$(find "$MAKEFILE_DIR/.theos/obj" -name "*.dylib" -print -quit)
+          # Search for the generated .dylib file anywhere in the workspace
+          DYLIB_PATH=$(find . -type f -name "*.dylib" -print -quit)
 
           if [ -z "$DYLIB_PATH" ]; then
             echo "No .dylib file found!"
