@@ -11,7 +11,7 @@ MyBlockButton_FILES = BlockNet.m  # Your main source file
 MyBlockButton_FRAMEWORKS = UIKit  # UIKit is needed for UI elements like UIButton
 MyBlockButton_LIBRARIES = objc  # To link the Objective-C runtime
 
-# Specify the property list file
+# Specify the property list file if needed
 MyBlockButton_PLIST = BlockNet.plist
 
 include $(THEOS)/makefiles/tweak.mk
