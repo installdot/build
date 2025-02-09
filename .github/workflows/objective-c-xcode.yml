@@ -1,0 +1,55 @@
+name: Build iOS Tweak
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3  # Use the latest GitHub Actions v3
+
+      - name: Set up dependencies
+        run: |
+          # Install Theos (This requires a macOS runner)
+          git clone --recursive https://github.com/theos/theos.git
+          export THEOS=$(pwd)/theos
+          export PATH=$THEOS/bin:$PATH
+          echo "Theos installation complete."
+
+      - name: Set up environment variables
+        run: |
+          export TARGET=iphone:clang:latest:7.0  # Adjust this if targeting a different iOS version
+          export THEOS=$PWD/theos
+          export PATH=$THEOS/bin:$PATH
+          echo "Environment setup complete."
+
+      - name: Find source files and build
+        run: |
+          # Find the source files (.m, .mm, .xm) in the current repository
+          SRC_FILES=$(find . -type f \( -name "*.m" -o -name "*.mm" -o -name "*.xm" \))
+
+          if [ -z "$SRC_FILES" ]; then
+            echo "No source files found. Exiting..."
+            exit 1
+          fi
+
+          echo "Found source files: $SRC_FILES"
+
+          # Navigate to the directory where the Makefile is located
+          DIR_PATH=$(dirname "$SRC_FILES")
+          cd "$DIR_PATH"
+
+          # Clean and build the package
+          make clean
+          make package
+
+      - name: Upload the generated .dylib
+        uses: actions/upload-artifact@v3  # Update to the latest v3 of the upload-artifact action
+        with:
+          name: MyBlockButton-dylib
+          path: .theos/obj/iphone/debug/arm64/MyBlockButton.dylib
