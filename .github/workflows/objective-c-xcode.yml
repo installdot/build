@@ -54,13 +54,27 @@ jobs:
           BLOCKNET_M_PATH="${{ env.blocknet_m }}"
           MAKEFILE_DIR=$(dirname "$BLOCKNET_M_PATH")
           cd "$MAKEFILE_DIR"
-          
+
           echo "Building tweak with BlockNet.m in directory: $MAKEFILE_DIR"
           make clean
           make
+
+      - name: Find and Upload the generated .dylib
+        id: find_dylib
+        run: |
+          # Find the generated .dylib file
+          DYLIB_PATH=$(find "$MAKEFILE_DIR/.theos/obj" -name "*.dylib" -print -quit)
+
+          if [ -z "$DYLIB_PATH" ]; then
+            echo "No .dylib file found!"
+            exit 1
+          fi
+
+          echo "Found .dylib at: $DYLIB_PATH"
+          echo "dylib_path=$DYLIB_PATH" >> $GITHUB_ENV
 
       - name: Upload the generated .dylib
         uses: actions/upload-artifact@v4
         with:
           name: BlockNet-dylib
-          path: "$MAKEFILE_DIR/.theos/obj/iphone/debug/arm64/*.dylib"  # Use wildcard to find the .dylib
+          path: "${{ env.dylib_path }}"
