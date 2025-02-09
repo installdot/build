@@ -23,9 +23,9 @@ jobs:
 
       - name: Set up environment variables
         run: |
-          export TARGET=iphone:clang:latest:7.0  # Adjust this if targeting a different iOS version
-          export THEOS=$PWD/theos
-          export PATH=$THEOS/bin:$PATH
+          echo "TARGET=iphone:clang:latest:7.0" >> $GITHUB_ENV  # Adjust this if targeting a different iOS version
+          echo "THEOS=$PWD/theos" >> $GITHUB_ENV
+          echo "PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
 
       - name: Find BlockNet.m file
         id: find_blocknet_m
