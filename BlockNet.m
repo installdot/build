@@ -12,12 +12,27 @@ static BOOL isBlocked = NO;
 
 + (void)injectButton {
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
+        UIWindow *keyWindow = nil;
+        
+        // Get the active window in iOS 16.6.1
+        for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                keyWindow = scene.windows.firstObject;
+                break;
+            }
+        }
+        
         if (!keyWindow) return;
 
-        // Create a draggable button
+        // Get screen size and center the button
+        CGFloat screenWidth = keyWindow.bounds.size.width;
+        CGFloat screenHeight = keyWindow.bounds.size.height;
+        CGFloat buttonWidth = 120;
+        CGFloat buttonHeight = 50;
+
+        // Create a draggable button in the center
         toggleButton = [UIButton buttonWithType:UIButtonTypeSystem];
-        toggleButton.frame = CGRectMake(100, 100, 80, 40);
+        toggleButton.frame = CGRectMake((screenWidth - buttonWidth) / 2, (screenHeight - buttonHeight) / 2, buttonWidth, buttonHeight);
         toggleButton.backgroundColor = [UIColor redColor];
         [toggleButton setTitle:@"Block" forState:UIControlStateNormal];
         [toggleButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
@@ -43,7 +58,7 @@ static BOOL isBlocked = NO;
         [toggleButton setTitle:@"Unblock" forState:UIControlStateNormal];
         toggleButton.backgroundColor = [UIColor greenColor];
 
-        // Kill network services
+        // Stop network-related services
         system("killall -STOP nehelper");
         system("killall -STOP mDNSResponder");
         system("killall -STOP rapportd");
