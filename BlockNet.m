@@ -1,61 +1,85 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
-#import <sys/socket.h>
-#import <netinet/in.h>
-#import <arpa/inet.h>
 
-@interface MyBlockButton : UIButton
-@property (nonatomic, assign) BOOL internetBlocked;
+@interface NetBlocker : NSObject
++ (void)injectButton;
 @end
 
-@implementation MyBlockButton
+@implementation NetBlocker
 
-// Toggle internet for the app when the button is clicked
-- (void)toggleInternet {
-    if (self.internetBlocked) {
-        // Unblock internet (resume network)
-        system("killall -CONT nehelper");
-        system("killall -CONT mDNSResponder");
-        system("killall -CONT rapportd");
-        self.internetBlocked = NO;
-        [self setTitle:@"BlockNet" forState:UIControlStateNormal];
-    } else {
-        // Block internet (pause network)
+static UIButton *toggleButton;
+static BOOL isBlocked = NO;
+
++ (void)injectButton {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
+        if (!keyWindow) return;
+
+        // Create a draggable button
+        toggleButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        toggleButton.frame = CGRectMake(100, 100, 80, 40);
+        toggleButton.backgroundColor = [UIColor redColor];
+        [toggleButton setTitle:@"Block" forState:UIControlStateNormal];
+        [toggleButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        toggleButton.layer.cornerRadius = 10;
+        toggleButton.clipsToBounds = YES;
+
+        // Add button action
+        [toggleButton addTarget:self action:@selector(toggleInternet) forControlEvents:UIControlEventTouchUpInside];
+
+        // Enable dragging
+        UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleDrag:)];
+        [toggleButton addGestureRecognizer:panGesture];
+
+        [keyWindow addSubview:toggleButton];
+    });
+}
+
+// Function to block/unblock internet
++ (void)toggleInternet {
+    isBlocked = !isBlocked;
+
+    if (isBlocked) {
+        [toggleButton setTitle:@"Unblock" forState:UIControlStateNormal];
+        toggleButton.backgroundColor = [UIColor greenColor];
+
+        // Kill network services
         system("killall -STOP nehelper");
         system("killall -STOP mDNSResponder");
         system("killall -STOP rapportd");
-        self.internetBlocked = YES;
-        [self setTitle:@"UnblockNet" forState:UIControlStateNormal];
+
+        NSLog(@"[NetBlocker] Internet Blocked!");
+    } else {
+        [toggleButton setTitle:@"Block" forState:UIControlStateNormal];
+        toggleButton.backgroundColor = [UIColor redColor];
+
+        // Resume network services
+        system("killall -CONT nehelper");
+        system("killall -CONT mDNSResponder");
+        system("killall -CONT rapportd");
+
+        NSLog(@"[NetBlocker] Internet Restored!");
     }
 }
 
-// Make the button draggable
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    CGPoint touchLocation = [[touches anyObject] locationInView:self.superview];
-    self.center = CGPointMake(touchLocation.x, touchLocation.y);
+// Make button draggable
++ (void)handleDrag:(UIPanGestureRecognizer *)gesture {
+    UIView *draggedView = gesture.view;
+    CGPoint translation = [gesture translationInView:draggedView.superview];
+
+    if (gesture.state == UIGestureRecognizerStateChanged) {
+        draggedView.center = CGPointMake(draggedView.center.x + translation.x, draggedView.center.y + translation.y);
+        [gesture setTranslation:CGPointZero inView:draggedView.superview];
+    }
 }
 
 @end
 
 %hook UIApplication
-- (void)applicationDidBecomeActive:(UIApplication *)application {
+
+- (void)didFinishLaunching {
     %orig;
-
-    // Ensure button is added only once
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
-        if (!keyWindow) return;
-
-        MyBlockButton *button = [MyBlockButton buttonWithType:UIButtonTypeSystem];
-        button.frame = CGRectMake(50, 100, 150, 50);
-        [button setTitle:@"Block Internet" forState:UIControlStateNormal];
-        [button addTarget:button action:@selector(toggleInternet) forControlEvents:UIControlEventTouchUpInside];
-        
-        button.backgroundColor = [UIColor redColor];
-        button.layer.cornerRadius = 10;
-        button.internetBlocked = NO;
-        [keyWindow addSubview:button];
-    });
+    [NetBlocker injectButton];
 }
+
 %end
