@@ -57,7 +57,7 @@ jobs:
           
           echo "Building tweak with BlockNet.m in directory: $MAKEFILE_DIR"
           make clean
-          make package
+          make
 
       - name: Upload the generated .dylib
         uses: actions/upload-artifact@v4
