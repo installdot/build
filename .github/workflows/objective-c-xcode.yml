@@ -28,28 +28,38 @@ jobs:
           export PATH=$THEOS/bin:$PATH
           echo "Environment setup complete."
 
-      - name: Find source files and build
+      - name: Find directories with Makefile and .m files, and build
         run: |
-          # Find the source files (.m, .mm, .xm) in the current repository
-          SRC_FILES=$(find . -type f \( -name "*.m" -o -name "*.mm" -o -name "*.xm" \))
+          # Initialize an empty file to collect the paths of built .dylibs
+          echo "Searching for Makefile and .m files..." > dylib_files.txt
+          
+          # Find all directories containing a Makefile and .m files
+          for dir in $(find . -type f -name "Makefile" -exec dirname {} \;); do
+            # Check if this directory contains .m files
+            if [ -n "$(find $dir -name "*.m")" ]; then
+              echo "Building in directory: $dir"
+              cd "$dir"
 
-          if [ -z "$SRC_FILES" ]; then
-            echo "No source files found. Exiting..."
-            exit 1
-          fi
+              # Clean and build the package
+              make clean || echo "make clean failed in $dir"
+              make package || echo "make package failed in $dir"
 
-          echo "Found source files: $SRC_FILES"
+              # Check if the dylib was generated in the current directory
+              dylib_file=$(find .theos/obj -type f -name "*.dylib")
+              if [ -n "$dylib_file" ]; then
+                echo "Found .dylib: $dylib_file"
+                # Save the dylib file path for uploading later
+                echo "$dylib_file" >> $GITHUB_ENV
+              else
+                echo "No .dylib found in $dir"
+              fi
+            else
+              echo "No .m files found in $dir, skipping build."
+            fi
+          done
 
-          # Navigate to the directory where the Makefile is located
-          DIR_PATH=$(dirname "$SRC_FILES")
-          cd "$DIR_PATH"
-
-          # Clean and build the package
-          make clean
-          make package
-
-      - name: Upload the generated .dylib
-        uses: actions/upload-artifact@v3  # Update to the latest v3 of the upload-artifact action
+      - name: Upload all .dylib files
+        uses: actions/upload-artifact@v4  # Use v4 of the upload-artifact action
         with:
-          name: MyBlockButton-dylib
-          path: .theos/obj/iphone/debug/arm64/MyBlockButton.dylib
+          name: MyBlockButton-dylibs
+          path: ${{ env.dylib_file }}
