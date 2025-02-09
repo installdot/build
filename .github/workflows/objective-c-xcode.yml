@@ -41,14 +41,12 @@ jobs:
           echo "BlockNet.m found at $BLOCKNET_M_PATH"
 
           # Save the path for later use
-          echo "::set-output name=blocknet_m::$BLOCKNET_M_PATH"
-
-
+          echo "blocknet_m=$BLOCKNET_M_PATH" >> $GITHUB_ENV
 
       - name: Build the Tweak
         run: |
           # Use the path of BlockNet.m to run the build
-          BLOCKNET_M_PATH=${{ steps.find_blocknet_m.outputs.blocknet_m }}
+          BLOCKNET_M_PATH="${{ env.blocknet_m }}"
           MAKEFILE_DIR=$(dirname "$BLOCKNET_M_PATH")
 
           # Navigate to the directory containing the Makefile and BlockNet.m
